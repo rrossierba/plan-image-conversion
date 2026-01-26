@@ -1,4 +1,5 @@
 import pickle, os, sys, re
+from time import sleep
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
@@ -18,7 +19,7 @@ def get_blocksworld_images_from_plan(plan:Plan, format:str, save_path:str):
     with open(f'files/blocksworld_files/plans/{plan_name}.pddl', 'r') as problem:
         problem_text = problem.read().lower()
 
-    folder_name = f"{save_path}/{plan_name}_{format}"
+    folder_name = f"{save_path}/{format}/{plan_name}"
     
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
@@ -44,7 +45,8 @@ def convert_blocksworld_plans(plan_path, format, save_path):
 
         
     for plans, plan_file_name in zip(plans_file_list, plans_file_name):
-        print(f"Converting {len(plans)} plans from {plan_file_name} to images...")
+        print(f"Converting {len(plans)} plans from {plan_file_name} to {format}...")
+        sleep(1)
         for plan in tqdm(plans):
             get_blocksworld_images_from_plan(plan, format=format, save_path=save_path)
         

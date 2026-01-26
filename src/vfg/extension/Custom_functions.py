@@ -166,7 +166,7 @@ def distributey(obj_list, settings, state, remove, get_meta):
     }
     obj, objdic = list(obj_list[0].items())[0]
 
-    row = int(re.findall('\d+', obj)[0]) - default_setting["initial"]
+    row = int(re.findall(r'\d+', obj)[0]) - default_setting["initial"]
     result["y"] = row * (objdic["height"] + default_setting["spacebtw"])
     return result, state
 
@@ -206,8 +206,8 @@ def distribute_grid_around_point(obj_list, settings, state, remove, get_meta):
 
     # object name
     obj, objdic = list(obj_list[0].items())[0]
-    row = int(re.findall('\d+', obj)[default_setting["rowindex"]])
-    col = int(re.findall('\d+', obj)[default_setting["colindex"]])
+    row = int(re.findall(r'\d+', obj)[default_setting["rowindex"]])
+    col = int(re.findall(r'\d+', obj)[default_setting["colindex"]])
     result["x"] = row * default_setting["margin"]
     result["y"] = col * default_setting["margin"]
     return result, state

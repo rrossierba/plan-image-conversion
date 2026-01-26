@@ -46,7 +46,7 @@ def export_media(vfg_json, format, parameters):
     startStep = max(0, startStep)
     stopStep = max(startStep, stopStep)
     if quality not in ["low", "medium", "high"]:
-        quality = "high"
+        quality = "medium"
 
     if format in ["mp4", "png", "gif"]:
         # Start building file
@@ -72,7 +72,7 @@ class LoopingPillowWriter(PillowWriter):
             duration=int(1000 / self.fps), loop=0)
 
 # Main function to create file for desired media output
-def create_media(vfg_json, format, quality='high'):
+def create_media(vfg_json, format, quality='medium'):
     # Choose the settings based on the quality provided
     chosen_quality = QUALITY_SETTINGS.get(quality, QUALITY_SETTINGS["high"])
     num_interpolation_frames = chosen_quality["interp_frames"]
@@ -88,8 +88,6 @@ def create_media(vfg_json, format, quality='high'):
 
     max_x = max(max(s['x'] + s['width'] for s in stage['visualSprites']) for stage in vfg_json['visualStages'])
     max_y = max(max(s['y'] + s['height'] for s in stage['visualSprites']) for stage in vfg_json['visualStages'])
-    ax.set_xlim([0, max_x])
-    ax.set_ylim([0, max_y])
 
     sprites = {}
     last_positions = {}
@@ -112,7 +110,7 @@ def create_media(vfg_json, format, quality='high'):
     if format in ["mp4", "gif"]:
         def update(frame):
             ax.clear()
-            ax.axis('equal')
+            ax.set_aspect('equal', adjustable='box')
             ax.axis('off')
             ax.set_xlim([0, max_x])
             ax.set_ylim([0, max_y])
@@ -145,7 +143,8 @@ def create_media(vfg_json, format, quality='high'):
             ani = FuncAnimation(fig, update, frames=total_frames, repeat=True)
             writer = LoopingPillowWriter(fps=fps)
             ani.save(tmpname, writer=writer)
-            plt.close(fig)
+        
+        plt.close(fig)
         # Read the content of the temporary file into a BytesIO object
         output = BytesIO()
         with open(tmpname, "rb") as f:
