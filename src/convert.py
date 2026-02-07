@@ -1,52 +1,94 @@
 import pickle, os, sys, re
-from time import sleep
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.append(current_dir)
 
 from plan import Plan
-from vfg_plan import BlocksworldVfgPlan, Visualizer, VfgPlan
+from vfg_plan import *
+from visualizer import *
 from tqdm import tqdm
 import pickle
 
-def get_blocksworld_images_from_plan(plan:Plan, format:str, save_path:str):
-    plan_name = re.search(r'p\d+', os.path.basename(plan.plan_name)).group()
-    
-    with open('files/blocksworld_files/plans/domain.pddl', 'r') as domain_file:
-        domain_text = domain_file.read().lower()
+class Converter:
+    def __init__(self, domain_path:str, problem_path:str, plan_path:str, animation_profile_path:str, format:str, save_path:str):
+        """
+        :param domain_path: percorso del file di dominio del problema
+        :type domain_path: str
+        :param problem_path: percorso della cartella contenente i file pddl dei problemi
+        :type problem_path: str
+        :param plan_path: percorso del file pkl contenente i piani
+        :type plan_path: str
+        :param animation_profile_path: percorso del file animation profile in pddl
+        :type animation_profile_path: str
+        :param format: formato del risultato: mp4 o png
+        :type format: str
+        :param save_path: percorso della cartella in cui salvare i risultati
+        :type save_path: str
+        """
 
-    with open(f'files/blocksworld_files/plans/{plan_name}.pddl', 'r') as problem:
-        problem_text = problem.read().lower()
+        with open(domain_path, 'r') as domain_file:
+            self.domain_text = domain_file.read().lower()
 
-    folder_name = f"{save_path}/{format}/{plan_name}"
-    
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
-    vfg_plan = BlocksworldVfgPlan(plan, domain_text, problem_text)
-    visualizer = Visualizer('files/ap.pddl')
-    visualizer.save_media(vfg_plan, format=format, result_folder=folder_name)
-    plan_description = str(plan)
-    
-    with open(f"{folder_name}/plan_description.txt", "w") as desc_file:
-        desc_file.write(plan_description)
-
-def convert_blocksworld_plans(plan_path, format, save_path):
-    if plan_path.__class__ == str:
-        plans_file_list = [pickle.load(open(plan_path, "rb"))]
-        plans_file_name = [os.path.basename(plan_path)]
-    elif plan_path.__class__ == list:
-        plans_file_list = []
-        plans_file_name = []
-        for path in plan_path:
-            plans_file_list.append(pickle.load(open(path, "rb")))
-            plans_file_name.append(os.path.basename(path))
-
+        self.plan_path = plan_path
         
-    for plans, plan_file_name in zip(plans_file_list, plans_file_name):
-        print(f"Converting {len(plans)} plans from {plan_file_name} to {format}...")
-        sleep(1)
-        for plan in tqdm(plans):
-            get_blocksworld_images_from_plan(plan, format=format, save_path=save_path)
+        with (open(animation_profile_path, "r")) as animation_profile_file:
+            self.animation_profile_text = animation_profile_file.read()
+
+        self.problem_path = problem_path
+        self.format = format if format in ['mp4', 'png'] else None
+        self.folder_name = f"{save_path}/{format}"
+        if not os.path.exists(self.folder_name):
+            os.makedirs(self.folder_name)
+
+    def get_media_from_plan(self, plan:Plan):
+        '''
+        Function that takes a plan and convert it into media.
+        Needs to be implemented by subclasses.
+        '''
+        raise NotImplementedError
+
+    def convert_plans(self):
+        '''
+        Function to convert the plans to the 
+        '''
+
+        if self.plan_path.__class__ == str:
+            plans_file_list = [pickle.load(open(self.plan_path, "rb"))]
+            plans_file_name = [os.path.basename(self.plan_path)]
+        elif self.plan_path.__class__ == list:
+            plans_file_list = []
+            plans_file_name = []
+            for path in self.plan_path:
+                plans_file_list.append(pickle.load(open(path, "rb")))
+                plans_file_name.append(os.path.basename(path))
+
+        for plans, plan_file_name in zip(plans_file_list, plans_file_name):
+            print(f"Converting {len(plans)} plans from {plan_file_name} to {self.format}...")
+            for plan in tqdm(plans):
+                self.get_media_from_plan(plan)
+    
+class BlocksWorldConverter(Converter):
+    def get_media_from_plan(self, plan:Plan):
+        '''
+        Function that takes a plan and convert it into a blocksworld image.
+
+        :param plan: Plan object to be converted
+        :type plan: Plan
+        '''
+        plan_name = re.search(r'p\d+', os.path.basename(plan.plan_name)).group()
         
+        with open(f'{self.problem_path}/{plan_name}.pddl', 'r') as problem:
+            problem_text = problem.read().lower()
+
+        BlocksWorldVisualizer(
+            blocksworld_vfg_plan=BlocksworldVfgPlan(plan, self.domain_text, problem_text), 
+            format=self.format, 
+            result_folder=self.folder_name, 
+            plan_name=plan_name,
+            animation_profile_text=self.animation_profile_text
+        ).save_media()
+        
+        # plan_description = str(plan)
+        # with open(f"{folder_name}/plan_description.txt", "w") as desc_file:
+        #     desc_file.write(plan_description)
