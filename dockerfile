@@ -6,7 +6,6 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # main directory
 RUN mkdir /app && chown -R appuser:appuser /app
-RUN mkdir /app/files && chown -R appuser:appuser /app/files
 
 WORKDIR /app
 
