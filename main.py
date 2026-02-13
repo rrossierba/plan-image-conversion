@@ -15,6 +15,7 @@ def run():
     animation_profile_path = config.get('animation_profile_path')    
     format = config.get('format', 'png')
     save_path = config.get('save_path')
+    n_jobs = config.get('num_processes', 1)
 
     domain_file_path = config.get('domain_file_path')
 
@@ -25,7 +26,8 @@ def run():
             plan_path=plan_collection_path,
             animation_profile_path= animation_profile_path,
             format=format,
-            save_path=save_path
+            save_path=save_path,
+            n_jobs=n_jobs
             )
     elif domain =='logistics':
         pass

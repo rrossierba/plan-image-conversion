@@ -1,18 +1,24 @@
 FROM python:3.13.11-slim-trixie
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# create the app directory
-RUN mkdir /app
+# create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# main directory
+RUN mkdir /app && chown -R appuser:appuser /app
+RUN mkdir /app/files && chown -R appuser:appuser /app/files
+
 WORKDIR /app
 
-# copy source files
-COPY src/ ./src/
-COPY main.py ./main.py
+# copy src and change owner
+COPY --chown=appuser:appuser src/ ./src/
+COPY --chown=appuser:appuser main.py ./main.py
 
-# update
+# update packages and dependencies (as root)
 RUN apt-get update
-
-# install pydependencies
 RUN uv pip install -r src/requirements.txt --system
+
+# change user
+USER appuser
 
 CMD ["python", "main.py"]

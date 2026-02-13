@@ -4,6 +4,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.append(current_dir)
 
+from multiprocessing import Pool, cpu_count
 from plan import Plan
 from vfg_plan import *
 from visualizer import *
@@ -11,7 +12,7 @@ from tqdm import tqdm
 import pickle
 
 class Converter:
-    def __init__(self, domain_path:str, problem_path:str, plan_path:str, animation_profile_path:str, format:str, save_path:str):
+    def __init__(self, domain_path:str, problem_path:str, plan_path:str, animation_profile_path:str, format:str, save_path:str, n_jobs:int=None):
         """
         :param domain_path: percorso del file di dominio del problema
         :type domain_path: str
@@ -41,6 +42,8 @@ class Converter:
         if not os.path.exists(self.folder_name):
             os.makedirs(self.folder_name)
 
+        self.n_jobs = n_jobs if n_jobs is not None else cpu_count()
+
     def get_media_from_plan(self, plan:Plan):
         '''
         Function that takes a plan and convert it into media.
@@ -63,10 +66,18 @@ class Converter:
                 plans_file_list.append(pickle.load(open(path, "rb")))
                 plans_file_name.append(os.path.basename(path))
 
+        # for plans, plan_file_name in zip(plans_file_list, plans_file_name):
+        #     print(f"Converting {len(plans)} plans from {plan_file_name} to {self.format}...")
+        #     for plan in tqdm(plans):
+        #         self.get_media_from_plan(plan)
+
         for plans, plan_file_name in zip(plans_file_list, plans_file_name):
-            print(f"Converting {len(plans)} plans from {plan_file_name} to {self.format}...")
-            for plan in tqdm(plans):
-                self.get_media_from_plan(plan)
+            print(f"Converting {len(plans)} plans from {plan_file_name} to {self.format} using {self.n_jobs} processes...")
+            
+            with Pool(processes=self.n_jobs) as pool:
+                with tqdm(total=len(plans), desc=f"Processing {plan_file_name}") as pbar:
+                    for _ in pool.imap_unordered(self.get_media_from_plan, plans, chunksize=1):
+                        pbar.update(1)
     
 class BlocksWorldConverter(Converter):
     def get_media_from_plan(self, plan:Plan):
