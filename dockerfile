@@ -1,4 +1,5 @@
 FROM python:3.13.11-slim-trixie
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # create the app directory
 RUN mkdir /app
@@ -10,10 +11,8 @@ COPY main.py ./main.py
 
 # update
 RUN apt-get update
-# RUN apt-get install -y --no-install-recommends ffmpeg
-# RUN rm -rf /var/lib/apt/lists/*
 
 # install pydependencies
-RUN pip install --no-cache-dir -r src/requirements.txt
+RUN uv pip install -r src/requirements.txt --system
 
 CMD ["python", "main.py"]
