@@ -88,13 +88,13 @@ def parse_visual(text_to_parse, result):
     temp_visual_block = text_to_parse[text_to_parse.index(pattern_visual):]
     temp_visual_block = Parser_Functions.get_one_block(temp_visual_block)
 
-    temp_visual_pattern = re.compile("(?i)" + pattern_visual + "\s[\w\-]+", re.IGNORECASE)
+    temp_visual_pattern = re.compile("(?i)" + pattern_visual + r"\s[\w\-]+", re.IGNORECASE)
     temp_subshape, temp_subshape_value = temp_visual_pattern.findall(temp_visual_block)[0].split()
 
     sublist = {}
 
     # Get the value of type
-    temp_regex_pattern = re.compile(pattern_type + "\s[\w\-]+", re.IGNORECASE)
+    temp_regex_pattern = re.compile(pattern_type + r"\s[\w\-]+", re.IGNORECASE)
     temp_subelement, temp_subelement_value = temp_regex_pattern.search(temp_visual_block)[0].split()
 
     if "objects" in temp_visual_block:
@@ -106,13 +106,13 @@ def parse_visual(text_to_parse, result):
     # Get the value of properties
     temp_property_block = temp_visual_block[temp_visual_block.index(pattern_properties) + len(pattern_properties):]
     temp_property_block = Parser_Functions.get_one_block(temp_property_block)
-    temp_properties_pattern = re.compile("\([a-zA-Z0-9_.-]*\s[#a-zA-Z0-9_.-]*\)")
+    temp_properties_pattern = re.compile(r"\([a-zA-Z0-9_.-]*\s[#a-zA-Z0-9_.-]*\)")
     temp_properties = temp_properties_pattern.findall(temp_property_block)
     for x in temp_properties:
         x, y = x.replace('(', '').replace(')', '').split()
         sublist[x] = y
     result["visual"][temp_subshape_value] = sublist
-    return result;
+    return result
 
 
 def parseObjectLine(pattern, text):
@@ -121,7 +121,7 @@ def parseObjectLine(pattern, text):
     :param text: one line of text
     :return: an array of objects
     """
-    temp_objects_pattern = re.compile(pattern + "\s*(\([^\)]+\)|[\w\-\%]+)", re.IGNORECASE)
+    temp_objects_pattern = re.compile(pattern + r"\s*(\([^\)]+\)|[\w\-\%]+)", re.IGNORECASE)
     try:
         objectsStr = temp_objects_pattern.search(text).group(1)
     except:
@@ -154,15 +154,15 @@ def parse_predicate(text_to_parse, result):
         # Regex: (?<=[\(])[^\S\r\n]+) matches spaces between ')' and ')'
     temp_visual_block = re.sub(r'((?<=[\)\w])[^\S\r\n]+(?=\))|(?<=[\(])[^\S\r\n]+)', '', temp_visual_block)
 
-    temp_visual_pattern = re.compile(pattern_predicate + "\s[\w\-]+", re.IGNORECASE)
+    temp_visual_pattern = re.compile(pattern_predicate + r"\s[\w\-]+", re.IGNORECASE)
     temp_subshape, temp_subshape_value = temp_visual_pattern.findall(temp_visual_block)[0].split()
 
     if "priority" in temp_visual_block:
-        priority_pattern = re.compile(pattern_priority + "\s*(\(\d+\)|[\d]+)", re.IGNORECASE)
+        priority_pattern = re.compile(pattern_priority + r"\s*(\(\d+\)|[\d]+)", re.IGNORECASE)
         priority = priority_pattern.findall(temp_visual_block)
 
     # Get the value of parameters
-    temp_regex_pattern = re.compile(pattern_parameters + " " + "\((.*?)\)", re.IGNORECASE)
+    temp_regex_pattern = re.compile(pattern_parameters + " " + r"\((.*?)\)", re.IGNORECASE)
     objectList = temp_regex_pattern.findall(temp_visual_block)[0].split()
 
     customObjectList = parseObjectLine(pattern_custom, temp_visual_block)

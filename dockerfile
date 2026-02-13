@@ -10,8 +10,8 @@ COPY main.py ./main.py
 
 # update
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends ffmpeg
-RUN rm -rf /var/lib/apt/lists/*
+# RUN apt-get install -y --no-install-recommends ffmpeg
+# RUN rm -rf /var/lib/apt/lists/*
 
 # install pydependencies
 RUN pip install --no-cache-dir -r src/requirements.txt

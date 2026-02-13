@@ -413,7 +413,6 @@ def distribute_within_objects_horizontal_v2(obj_list, settings, state, remove, g
     if obj in state[parent]:
         objindex = state[parent].index(obj)
         result["x"] = parentdic["x"] + objindex * (objdic["width"] + padding)
-        print(result)
         return result, state
     else:
         for num, value in enumerate(state[parent]):
@@ -421,7 +420,6 @@ def distribute_within_objects_horizontal_v2(obj_list, settings, state, remove, g
                 state[parent][num] = obj
                 state[parent].append(num + 1)
                 result["x"] = parentdic["x"] + num * (objdic["width"] + padding)
-                print(result)
                 return result, state
 
 
@@ -490,7 +488,6 @@ def distribute_within_objects_horizontal(obj_list, settings, state, remove, get_
                 state[parent][num] = obj
                 state[parent].append(num + 1)
                 result["x"] = parentdic["x"] + num * (objdic["width"] + padding)
-                print(result)
                 return result, state
 
 

@@ -76,9 +76,10 @@ class BlocksWorldConverter(Converter):
         :param plan: Plan object to be converted
         :type plan: Plan
         '''
-        plan_name = re.search(r'p\d+', os.path.basename(plan.plan_name)).group()
+        pattern = r'p\d+(?:_\d+)?'
+        plan_name = re.search(pattern, os.path.basename(plan.plan_name)).group()
         
-        with open(f'{self.problem_path}/{plan_name}.pddl', 'r') as problem:
+        with open(f'{self.problem_path}/{plan_name.split('_')[0]}.pddl', 'r') as problem:
             problem_text = problem.read().lower()
 
         BlocksWorldVisualizer(
@@ -88,7 +89,7 @@ class BlocksWorldConverter(Converter):
             plan_name=plan_name,
             animation_profile_text=self.animation_profile_text
         ).save_media()
-        
-        # plan_description = str(plan)
-        # with open(f"{folder_name}/plan_description.txt", "w") as desc_file:
-        #     desc_file.write(plan_description)
+
+class LogisticsConverter(Converter):
+    def get_media_from_plan(self, plan):
+        pass

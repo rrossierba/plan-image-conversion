@@ -50,94 +50,92 @@ def convert_predicate(predicate_string):
     predicate_object['objectNames'] = predicate_args
     return predicate_object
 
-# def get_stages(plan, problem_dic, problem_file, predicates_list, animation_profile):
-#     """
-#     The function is to get the list of steps for Step3 to use
-#     :param plan: solution file
-#     :param problem_dic: problem dictionary contains the initial and goal stages
-#     :param problem_file: problem file name
-#     :param predicates_list: a list of predicates
-#     :param animation_profile: animation profile
-#     :return:  a list of steps containing information about all stages
-#     """
+def get_stages_from_pddl_plan(plan, problem_dic, problem_file, predicates_list, animation_profile=None):
+    """
+    The function is to get the list of steps for Step3 to use
+    :param plan: solution file in pddl format
+    :param problem_dic: problem dictionary contains the initial and goal stages
+    :param problem_file: problem file name
+    :param predicates_list: a list of predicates
+    :param animation_profile: animation profile
+    :return:  a list of steps containing information about all stages
+    """
+    
+    # Initial stage
+    stages = problem_dic[0]['init'].copy()
+    objects = Problem_parser.get_object_list(problem_file)
+    # finalstage = problem_dic[1]['goal'].copy()
 
-#     # Initial stage
-#     stages = problem_dic[0]['init'].copy()
-#     objects = Problem_parser.get_object_list(problem_file)
-#     finalstage = problem_dic[1]['goal'].copy()
+    # Getting the list of actions from results returned from planning.domain api
+    try:
+        actionlist = plan['result']['plan']
+    except KeyError:
+        raise Exception("No plan has been returned")
 
-#     # Getting the list of actions from results returned from planning.domain api
-#     try:
-#         actionlist = plan['result']['plan']
-#     except KeyError:
-#         raise Exception("No plan has been returned")
+    action_effect_list = get_action_effect_list(actionlist)
 
-#     action_effect_list = get_action_effect_list(actionlist)
+    # Final result structure
+    content = {"stages": [], "objects": objects, "subgoals": []}
+    # Adding initial stage
+    content['stages'].append({
+        "items": stages.copy(),
+        "add": "",
+        "remove": "",
+        "stageName": "Initial Stage",
+        "stageInfo": "No Step Information",
+    })
 
-#     # Final result structure
-#     content = {"stages": [], "objects": objects, "subgoals": []}
-#     # Adding initial stage
-#     content['stages'].append({
-#         "items": stages.copy(),
-#         "add": "",
-#         "remove": "",
-#         "stageName": "Initial Stage",
-#         "stageInfo": "No Step Information",
-#     })
+    if animation_profile and animation_profile.get("cost_keyword") is not None:
+        current_cost = 0
+        content['stages'][0]["cost"] = current_cost
+    else:
+        current_cost = None
 
-#     if animation_profile["cost_keyword"] is not None:
-#         current_cost = 0
-#         content['stages'][0]["cost"] = current_cost
-#     else:
-#         current_cost = None
+    for counter in range(len(actionlist)):
+        add_predicate_list, remove_predicate_list = Problem_parser.get_separate_state_list(predicates_list, action_effect_list[counter])
 
-#     for counter in range(len(actionlist)):
-#         print("Action effect list:", action_effect_list[counter])
-#         add_predicate_list, remove_predicate_list = Problem_parser.get_separate_state_list(predicates_list, action_effect_list[counter])
-#         # print("Add list:", add_predicate_list)
+        # 1. Find the difference between 2 steps
+        for predicate in add_predicate_list:
+            if predicate in stages:
+                add_predicate_list.remove(predicate)
+        for predicate in remove_predicate_list:
+            if predicate not in stages:
+                remove_predicate_list.remove(predicate)
 
-#         # 1. Find the difference between 2 steps
-#         for predicate in add_predicate_list:
-#             if predicate in stages:
-#                 add_predicate_list.remove(predicate)
-#         for predicate in remove_predicate_list:
-#             if predicate not in stages:
-#                 remove_predicate_list.remove(predicate)
+        # Append the list to get the final result
+        for add_predicate in add_predicate_list:
+            stages.append(add_predicate)
+        for remove_predicate in remove_predicate_list:
+            stages.remove(remove_predicate)
 
-#         # Append the list to get the final result
-#         for add_predicate in add_predicate_list:
-#             stages.append(add_predicate)
-#         for remove_predicate in remove_predicate_list:
-#             stages.remove(remove_predicate)
+        # 2.
+        # Get the action name of this step from the plan
+        action_name = actionlist[counter]['name']
 
-#         # 2.
-#         # Get the action name of this step from the plan
-#         action_name = actionlist[counter]['name']
+        # 3.
+        # Get the step information about the current step
+        # Replacing \n with \r\n in order to display it correctly
+        step_info_with_padding = actionlist[counter]['action'].replace("\n", "\r\n")
+        step_info = step_info_with_padding[step_info_with_padding.index("(:action"):]
 
-#         # 3.
-#         # Get the step information about the current step
-#         # Replacing \n with \r\n in order to display it correctly
-#         step_info_with_padding = actionlist[counter]['action'].replace("\n", "\r\n")
-#         step_info = step_info_with_padding[step_info_with_padding.index("(:action"):]
+        if current_cost is not None:
+            current_cost += get_action_cost(action_effect_list[counter], animation_profile["cost_keyword"])
 
-#         if current_cost is not None:
-#             current_cost += get_action_cost(action_effect_list[counter], animation_profile["cost_keyword"])
+        # 4.
+        # Append everything to get the final output - content
 
-#         # 4.
-#         # Append everything to get the final output - content
+        result = {"items": stages.copy(),
+                  "add": add_predicate_list,
+                  "remove": remove_predicate_list,
+                  "stageName": action_name,
+                  "stageInfo": step_info
+                  }
+        if current_cost is not None:
+            result["cost"] = current_cost
 
-#         result = {"items": stages.copy(),
-#                   "add": add_predicate_list,
-#                   "remove": remove_predicate_list,
-#                   "stageName": action_name,
-#                   "stageInfo": step_info
-#                   }
-#         if current_cost is not None:
-#             result["cost"] = current_cost
+        content['stages'].append(result)
 
-#         content['stages'].append(result)
-
-#     return content
+    return content
 
 def get_stages(plan, problem_dic, problem_file, animation_profile=None):
     """

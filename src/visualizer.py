@@ -1,4 +1,6 @@
 import matplotlib
+matplotlib.use('Agg')
+
 from vfg_plan import VfgPlan, BlocksworldVfgPlan
 import zipfile, os
 from exporter import create_media
@@ -46,7 +48,7 @@ class Visualizer:
         return self.vfg_plan.plan.plan_name.split('/')[-1]
 
 class BlocksWorldVisualizer(Visualizer):
-    def __init__(self, blocksworld_vfg_plan:BlocksworldVfgPlan, format, result_folder, animation_profile_text, plan_name, figsize=15, dpi=100):
+    def __init__(self, blocksworld_vfg_plan:BlocksworldVfgPlan, format, result_folder, animation_profile_text, plan_name, figsize=4, dpi=64):
         '''
         :param blocksworld_vfg_plan: BlocksworldVfgPlan object
         :param format: as Visualizer
@@ -69,26 +71,19 @@ class BlocksWorldVisualizer(Visualizer):
         '''
         Function that calculates the position of some BlocksWorld elements dinamically
         '''
-
-        # calculate the dimension in an adaptive way
-        max_dimensions = self.animation_profile_params.get('max_dimensions', (10,10))
-        max_width, max_height = max_dimensions
-        max_dim = max(max_width, max_height)
+        max_dim = self.animation_profile_params.get('max_dimensions', 10)
         
-        block_space_ratio = 20 if (max_dim > 10) else 10
-        
+        block_space_ratio = 5
         block_size = (self.figsize*self.dpi)//max_dim
         block_space_between = block_size // block_space_ratio
         claw_width = block_size
         claw_height = claw_width // 2
         
-        claw_x = ((block_size + block_space_between) * (max_dim) )//2
-        claw_y = int(block_size * (max_height + 1))
-
-        ceiling_y = claw_y + claw_height
+        claw_y = int(block_size * (max_dim + 2))
+        claw_x = (claw_y - claw_width)//2
         
         holding_effect = block_size - claw_height//2
-        board_height = 4
+        board_height = 1
         
         # apply the dimensions to the animation profile
         new_animation_profile = self.animation_profile_text.format_map({
@@ -100,13 +95,13 @@ class BlocksWorldVisualizer(Visualizer):
             'CLAW_WIDTH': str(claw_width),
             'CLAW_HEIGHT': str(claw_height),
             'BOARD_HEIGHT': str(board_height),
-            'CEILING_Y': str(ceiling_y),
         })
 
         # update rcparams of matplotlib
         matplotlib.rcParams.update({
             'figure.figsize': (self.figsize, self.figsize),
-            'font.size': block_size // 3,
+            'figure.dpi': self.dpi,
+            'font.size': block_size//1.5,
             'figure.subplot.left': 0.01,
             'figure.subplot.right': 0.99,
             'figure.subplot.bottom': 0.01,

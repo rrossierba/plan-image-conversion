@@ -13,9 +13,8 @@ def run():
     plan_collection_path = config.get('plan_collection_path')
     problem_path = config.get('problem_folder')
     animation_profile_path = config.get('animation_profile_path')    
-    format = config.get('format')
+    format = config.get('format', 'png')
     save_path = config.get('save_path')
-    save_path = f'{save_path}/{domain}'
 
     domain_file_path = config.get('domain_file_path')
 
@@ -28,6 +27,8 @@ def run():
             format=format,
             save_path=save_path
             )
+    elif domain =='logistics':
+        pass
     else:
         raise NotImplementedError('Requested domain is not implemented yet')
     

@@ -89,7 +89,7 @@ def create_media(vfg_json, format, quality='medium'):
     max_x = max(max(s['x'] + s['width'] for s in stage['visualSprites']) for stage in vfg_json['visualStages'])
     max_y = max(max(s['y'] + s['height'] for s in stage['visualSprites']) for stage in vfg_json['visualStages'])
 
-    sprites = {}
+    # sprites = {}
     last_positions = {}
     image_table = {}
     tint_cache = {}
@@ -125,7 +125,7 @@ def create_media(vfg_json, format, quality='medium'):
                 stage_idx = frame // num_interpolation_frames
                 stage = visual_stages[stage_idx]
 
-            process_sprites(stage, last_positions, interpolation_alpha, image_table, tint_cache, ax, sprites)
+            process_sprites(stage, last_positions, interpolation_alpha, image_table, tint_cache, ax)
 
         # add a few frames to ensure we can view the final state
         total_frames = len(visual_stages) * num_interpolation_frames + int(1 * num_interpolation_frames)
@@ -165,7 +165,7 @@ def create_media(vfg_json, format, quality='medium'):
             ax.axis('off')
             ax.set_xlim([0, max_x])
             ax.set_ylim([0, max_y])
-            process_sprites(stage, last_positions, None, image_table, tint_cache, ax, sprites)
+            process_sprites(stage, last_positions, None, image_table, tint_cache, ax)
 
             # Write images to a buffer
             buf = io.BytesIO()
@@ -187,45 +187,108 @@ def create_media(vfg_json, format, quality='medium'):
         return zip_buffer
 
 
-def process_sprites(stage, last_positions, interpolation_alpha, image_table, tint_cache, ax, sprites):
+# def process_sprites(stage, last_positions, interpolation_alpha, image_table, tint_cache, ax, sprites):
+#     for sprite in stage['visualSprites']:
+#         x, y, w, h = sprite['x'], sprite['y'], sprite['width'], sprite['height']
+#         color = (sprite['color']['r'], sprite['color']['g'], sprite['color']['b'], sprite['color']['a'])
+#         name = sprite['name']
+
+#         if name in last_positions and interpolation_alpha != None:
+#             x_last, y_last = last_positions[name]
+#             x = np.interp(interpolation_alpha, [0, 1], [x_last, x])
+#             y = np.interp(interpolation_alpha, [0, 1], [y_last, y])
+
+#         prefab_image = sprite.get('prefabimage', None)
+
+#         if prefab_image in image_table:
+#             cache_key = (prefab_image, tuple(color))  # Create a unique key for this image and color
+            
+#             # Check if the tinted image is in the cache
+#             if cache_key not in tint_cache:
+#                 image = np.array(image_table[prefab_image])
+#                 tinted_image = apply_tint(image, color)
+                
+#                 # Save the tinted image to the cache
+#                 tint_cache[cache_key] = tinted_image
+            
+#             # Use the tinted image from the cache
+#             ax.imshow(tint_cache[cache_key], extent=[x, x+w, y, y+h], origin='upper')
+
+#         else:
+#             if name not in sprites:
+#                 sprites[name] = patches.Rectangle((x, y), w, h, linewidth=1, edgecolor='none', facecolor=color)
+#                 ax.add_patch(sprites[name])
+#             else:
+#                 rect = patches.Rectangle((x, y), w, h, facecolor=color)
+#                 ax.add_patch(rect)
+        
+#         last_positions[name] = (x, y)
+
+#         if sprite['showname']:
+#             ax.text(x + w/2, y + h/2, name, ha='center', va='center')
+
+def process_sprites(stage, last_positions, interpolation_alpha, image_table, tint_cache, ax):
+    # draw the sprite for the single stage
+    current_sprite_names = set()
+    
     for sprite in stage['visualSprites']:
         x, y, w, h = sprite['x'], sprite['y'], sprite['width'], sprite['height']
         color = (sprite['color']['r'], sprite['color']['g'], sprite['color']['b'], sprite['color']['a'])
         name = sprite['name']
-
-        if name in last_positions and interpolation_alpha != None:
+        
+        current_sprite_names.add(name)
+        
+        # Interpolazione della posizione se abbiamo dati precedenti
+        if name in last_positions and interpolation_alpha is not None:
             x_last, y_last = last_positions[name]
             x = np.interp(interpolation_alpha, [0, 1], [x_last, x])
             y = np.interp(interpolation_alpha, [0, 1], [y_last, y])
-
+        
         prefab_image = sprite.get('prefabimage', None)
-
-        if prefab_image in image_table:
-            cache_key = (prefab_image, tuple(color))  # Create a unique key for this image and color
+        
+        # sprite as image
+        if prefab_image and prefab_image in image_table:
+            cache_key = (prefab_image, tuple(color))
             
-            # Check if the tinted image is in the cache
+            # generate the image just if it is not in cache
             if cache_key not in tint_cache:
-                image = np.array(image_table[prefab_image])
+                image = image_table[prefab_image]
                 tinted_image = apply_tint(image, color)
-                
-                # Save the tinted image to the cache
                 tint_cache[cache_key] = tinted_image
             
-            # Use the tinted image from the cache
-            ax.imshow(tint_cache[cache_key], extent=[x, x+w, y, y+h], origin='upper')
-
-        else:
-            if name not in sprites:
-                sprites[name] = patches.Rectangle((x, y), w, h, linewidth=1, edgecolor='none', facecolor=color)
-                ax.add_patch(sprites[name])
-            else:
-                sprites[name].set_xy((x, y))
-                sprites[name].set_facecolor(color)
-                ax.add_patch(sprites[name])
+            # show the image
+            ax.imshow(tint_cache[cache_key], extent=[x, x+w, y, y+h], origin='upper', interpolation='bilinear')
         
+        # if there is no image the sprite is a rectangle
+        else:
+            rect = patches.Rectangle(
+                (x, y), w, h, linewidth=0, edgecolor='none', facecolor=color
+            )
+            ax.add_patch(rect)
+        
+        # update position
         last_positions[name] = (x, y)
+        
+        # show name
+        if sprite.get('showname', False):
+            ax.text(
+                x + w/2, y + h/2, name.upper(), 
+                ha='center', va='center',
+                color='white' if sum(color[:3]) < 1.5 else 'black'
+            )
+        
+        # show labels
+        if sprite.get('showlabel', False):
+            label = str(sprite.get('label'))
+            labelcolor = sprite.get('labelcolor', 'black')
+            labelcolor = (labelcolor['r'], labelcolor['g'], labelcolor['b'], labelcolor['a'])
+            ax.text(
+                x + w/2, y + h/2, label.upper(), 
+                ha='center', va='center',
+                color=labelcolor
+            )
 
-        if sprite['showname']:
-            ax.text(x + w/2, y + h/2, name, ha='center', va='center')
-
-
+    if interpolation_alpha is None:  # just png
+        sprites_to_remove = set(last_positions.keys()) - current_sprite_names
+        for sprite_name in sprites_to_remove:
+            del last_positions[sprite_name]
