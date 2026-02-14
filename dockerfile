@@ -1,4 +1,6 @@
 FROM python:3.13.11-slim-trixie
+
+# install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # these will be overwritten from the .env file
@@ -19,9 +21,12 @@ COPY --chown=${USERNAME}:${USERNAME} main.py ./main.py
 
 # update and install dependencies
 RUN apt-get update
+RUN apt-get install -y --no-install-recommends ffmpeg 
 RUN uv pip install -r src/requirements.txt --system
 
 # change user
 USER ${USERNAME}
 
+# specify the configuration file and run the script
+ENV CONFIG_FILE=/app/files/config.json
 CMD ["python", "main.py"]

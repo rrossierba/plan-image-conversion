@@ -1,7 +1,4 @@
-import matplotlib
-matplotlib.use('Agg')
-
-from vfg_plan import VfgPlan, BlocksworldVfgPlan
+from vfg_plan import VfgPlan, BlocksWorldVfgPlan
 import zipfile, os, re
 from exporter import export_media
 
@@ -24,31 +21,36 @@ class Visualizer:
         '''
         Function that use the parameter of the Visualizer to save the media in the right folder with the right format.
         '''
-        animation_profile = self.adjust_animation_profile()
+        
+        # every subclass can edit this function and adjust animation profile
+        animation_profile, figure_params = self.adjust_animation_profile()
         vfg_json = self.vfg_plan.get_vfg(animation_profile)
         folder_name = f"{self.result_folder}/{self.get_plan_name()}"
 
-        result = export_media(vfg_json, self.format, {'quality':'medium'})
+        # extract the result
+        result = export_media(vfg_json=vfg_json, format=self.format, quality='medium', figure_context=figure_params)
+        
+        # save the result
         if self.format == 'png':
             if result:
-                folder_name = f'{folder_name}/'
+                folder_name = f'{folder_name}/'            
                 if not os.path.exists(folder_name):
                     os.makedirs(folder_name)
                 with zipfile.ZipFile(result, 'r') as zip_ref:
                     zip_ref.extractall(folder_name)
-        elif self.format == 'mp4':
+        elif self.format == 'mp4' or self.format == 'gif':
             if result:
-                with open(f"{folder_name}_animation.mp4", "wb") as f:
+                with open(f"{folder_name}_animation.{self.format}", "wb") as f:
                     f.write(result.getbuffer())
 
     def adjust_animation_profile(self):
-        return self.animation_profile_text
+        return self.animation_profile_text, {}
     
     def get_plan_name(self):
         return self.vfg_plan.plan.plan_name.split('/')[-1]
 
 class BlocksWorldVisualizer(Visualizer):
-    def __init__(self, blocksworld_vfg_plan:BlocksworldVfgPlan, format, result_folder, animation_profile_text, figsize=4, dpi=64):
+    def __init__(self, blocksworld_vfg_plan:BlocksWorldVfgPlan, format, result_folder, animation_profile_text, figsize=8, dpi=32):
         '''
         :param blocksworld_vfg_plan: BlocksworldVfgPlan object
         :param format: as Visualizer
@@ -68,7 +70,7 @@ class BlocksWorldVisualizer(Visualizer):
     
     def adjust_animation_profile(self):
         '''
-        Function that calculates the position of some BlocksWorld elements dinamically
+        Function that calculates the position of some BlocksWorld elements dinamically, depending on how many blocks are in the problem.
         '''
         max_dim = self.animation_profile_params.get('max_dimensions', 10)
         
@@ -97,17 +99,17 @@ class BlocksWorldVisualizer(Visualizer):
         })
 
         # update rcparams of matplotlib
-        matplotlib.rcParams.update({
+        figure_params = {
             'figure.figsize': (self.figsize, self.figsize),
             'figure.dpi': self.dpi,
-            'font.size': block_size//1.5,
+            'font.size': block_size,
             'figure.subplot.left': 0.01,
             'figure.subplot.right': 0.99,
             'figure.subplot.bottom': 0.01,
             'figure.subplot.top': 0.99
-        })
+        }
 
-        return new_animation_profile
+        return new_animation_profile, figure_params
 
     def get_plan_name(self):
         pattern = r'p\d+(?:_\d+)?'

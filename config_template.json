@@ -1,0 +1,12 @@
+{
+    "format": "png",
+    "domain":"",
+    
+    "save_path": "results",
+    "domain_file_path":"domain.pddl",
+    "animation_profile_path":"ap.pddl",
+    "problem_folder": "problems",
+    "plan_collection_path": "plans.pkl",
+
+    "num_processes":1
+}

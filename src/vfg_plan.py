@@ -9,6 +9,8 @@ from vfg.parser.Domain_parser import get_domain_json
 from vfg.parser.Problem_parser import get_problem_dic
 from vfg.parser.Predicates_generator import get_stages
 
+from typing import Dict
+
 class VfgPlan:
     def __init__(self, plan:Plan, domain_text:str, problem_text:str):
         '''
@@ -19,16 +21,16 @@ class VfgPlan:
         :param problem_text: string representing the problem instance solved by plan
         :type problem_text: str
         '''
-        self.plan = plan
-        self.domain_text = domain_text
-        self.problem_text = problem_text
-        self.domain_dict = get_domain_json(self.domain_text)
-        self.problem_dict = get_problem_dic(self.problem_text, self.domain_dict)
-        self.stages = get_stages(self.plan, self.problem_dict, self.problem_text)
+        self.plan:Plan = plan
+        self.domain_text:str = domain_text
+        self.problem_text:str = problem_text
+        self.domain_dict:Dict = get_domain_json(self.domain_text)
+        self.problem_dict:Dict = get_problem_dic(self.problem_text, self.domain_dict)
+        self.stages:Dict = get_stages(self.plan, self.problem_dict, self.problem_text)
     
     def get_vfg(self, animation_profile_pddl):   
-        animation_profile = json.loads(get_animation_profile(animation_profile_pddl, self.stages['objects']))
-        visualisation_dic = get_visualisation_dic(self.stages, animation_profile, self.problem_dict)
+        animation_profile:Dict = json.loads(get_animation_profile(animation_profile_pddl, self.stages['objects']))
+        visualisation_dic:Dict = get_visualisation_dic(self.stages, animation_profile, self.problem_dict)
         return generate_visualisation_file(visualisation_dic, self.stages['objects'], animation_profile)
 
 class BlocksWorldVfgPlan(VfgPlan):

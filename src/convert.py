@@ -1,24 +1,31 @@
-import os, sys, re, gc, pickle
+import os, sys, re, gc, pickle, logging
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.append(current_dir)
 
 from multiprocessing import Pool
 from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 from typing import Type, Callable, Union, List
+from logger import setup_logging
 
 # need to be imported for the pickle objects
 from plan import Plan
+from vfg_plan import VfgPlan
+from visualizer import Visualizer
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 # global variables, instantiated just once but with global scope
-g_domain_text = None
-g_animation_profile_text = None
-g_problem_path = None
-g_folder_name = None
-g_format = None
-g_VisualizerClass = None
-g_VfgPlanClass = None
-g_name_parser = None
+g_domain_text:str = None
+g_animation_profile_text:str = None
+g_problem_path:str = None
+g_result_folder_name:str = None
+g_format:str = None
+g_VisualizerClass:Type = None
+g_VfgPlanClass:Type = None
+g_name_parser:Callable[[str], str] = None
 
 # initialize the global variables, useful for multi-processing tasks
 def worker_initializer(domain_text, animation_profile_text, problem_path, 
@@ -37,20 +44,21 @@ def worker_initializer(domain_text, animation_profile_text, problem_path,
     :param parser: function to correctely parse problem names
     '''
     
-    global g_domain_text, g_animation_profile_text, g_problem_path, g_folder_name, g_format, g_VisualizerClass, g_VfgPlanClass, g_name_parser
+    global g_domain_text, g_animation_profile_text, g_problem_path, g_result_folder_name, g_format, g_VisualizerClass, g_VfgPlanClass, g_name_parser
     
     g_domain_text = domain_text
     g_animation_profile_text = animation_profile_text
     g_problem_path = problem_path
-    g_folder_name = folder_name
+    g_result_folder_name = folder_name
     g_format = format
     g_VisualizerClass = VisualizerClass
     g_VfgPlanClass = VfgPlanClass
     g_name_parser = parser
     
+    setup_logging()
     gc.disable() # make problems with multi-processing
 
-def worker_process_plan(plan):
+def worker_process_plan(plan:Plan):
     '''
     Function that actually does the process
     
@@ -61,27 +69,27 @@ def worker_process_plan(plan):
         problem_file = os.path.join(g_problem_path, f"{problem_filename_base}.pddl")
         
         if not os.path.exists(problem_file):
-            print(f"[Warn] Problem file not found: {problem_file}")
+            logger.error(f"Problem file not found: {problem_file}")
             return
 
         with open(problem_file, 'r') as problem:
             problem_text = problem.read().lower()
 
-        vfg_plan_instance = g_VfgPlanClass(plan, g_domain_text, problem_text)
-        viz_instance = g_VisualizerClass(
+        vfg_plan_instance:VfgPlan = g_VfgPlanClass(plan, g_domain_text, problem_text)
+        viz_instance:Visualizer = g_VisualizerClass(
             vfg_plan_instance,
             g_format, 
-            g_folder_name, 
+            g_result_folder_name, 
             g_animation_profile_text
         )
 
         viz_instance.save_media()
 
     except Exception as e:
-        print(f"failed processing plan {plan.plan_name}: {e}")
+        logger.exception(f"Failed processing plan {g_name_parser(plan.plan_name)}: {e}")
 
 class GenericConverter:
-    def _init__(self, domain_path: str, problem_path: str, plan_path: Union[str, List[str]], animation_profile_path: str, format: str, save_path: str, visualizer_class: Type, vfg_plan_class: Type, n_jobs: int = 1, name_parser: Callable[[str], str] = None):
+    def __init__(self, domain_path: str, problem_path: str, plan_path: Union[str, List[str]], animation_profile_path: str, format: str, save_path: str, visualizer_class: Type, vfg_plan_class: Type, n_jobs: int = 1, name_parser: Callable[[str], str] = None):
         '''
         :param domain_path: path of the pddl domain file
         :type domain_path: str
@@ -142,30 +150,31 @@ class GenericConverter:
         for path in paths:
             try:
                 if not os.path.exists(path):
-                    print(f"Skipping non existent plan file: {path}")
+                    logger.debug(f"Skipping non existent plan file: {path}")
                     continue
                     
                 with open(path, "rb") as f:
                     plans_list = pickle.load(f)
                 
                 plan_file_name = os.path.basename(path)
-                print(f"Converting {len(plans_list)} plans from {plan_file_name} to {self.format} using {self.n_jobs} processes...")
+                logger.info(f"Converting {len(plans_list)} plans from {plan_file_name} to {self.format} using {self.n_jobs} processes...")
 
                 # multi process operation
-                with Pool(processes=self.n_jobs, initializer=worker_initializer, initargs=init_args, maxtasksperchild=5) as pool:
-                    list(
-                        tqdm(
-                            pool.imap_unordered(worker_process_plan, plans_list, chunksize=1), 
-                            total=len(plans_list),
-                            desc=f"Processing {plan_file_name}"
+                with logging_redirect_tqdm():
+                    with Pool(processes=self.n_jobs, initializer=worker_initializer, initargs=init_args, maxtasksperchild=5) as pool:
+                        list(
+                            tqdm(
+                                pool.imap_unordered(worker_process_plan, plans_list, chunksize=1), 
+                                total=len(plans_list),
+                                desc=f"Processing {plan_file_name}"
+                            )
                         )
-                    )
-                
+                    
                 del plans_list
                 gc.collect()
 
             except Exception as e:
-                print(f"error processing file {path}: {e}")
+                logger.exception(f"Error processing file {path}: {e}")
 
 ## functions to parse the problem name into the actual name
 def blocksworld_problem_name_parser(plan_name: str) -> str:
@@ -185,5 +194,12 @@ def blocksworld_problem_name_parser(plan_name: str) -> str:
     return os.path.basename(plan_name).split('.')[0]
 
 def logistics_problem_name_parser(plan_name: str)-> str:
-    ''''''
-    pass
+    '''
+    Function to correctely parse the plan name for Logistic domain.
+    
+    :param plan_name: whole plan name
+    :type plan_name: str
+    :return: the correct problem name
+    :rtype: str
+    '''
+    return plan_name

@@ -22,27 +22,22 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 # A few constants
 _STATES_PER_SECOND = 1.5
 QUALITY_SETTINGS = {
-    "low": {"interp_frames": 2},
-    "medium": {"interp_frames": 6},
-    "high": {"interp_frames": 10}
+    'low': {'interp_frames': 2},
+    'medium': {'interp_frames': 6},
+    'high': {'interp_frames': 10}
 }
 
-def export_media(vfg_json, format, parameters):
-    if parameters==None:
+def export_media(vfg_json, format, quality='medium', figure_context={}):
+    if quality not in ['low', 'medium', 'high']:
         quality = 'medium'
-    else:
-        quality = parameters.get("quality")
-        if quality not in ["low", "medium", "high"]:
-            quality = "medium"
 
-    if format in ["mp4", "png"]:
+    if format in ['mp4', 'png', 'gif']:
         try:
-            return create_media(vfg_json, format, quality)
+            return create_media(vfg_json, format, quality, figure_context)
         finally:
             plt.close('all')
-    elif format == "webm":
-        return "error"
-    return "error"
+    else:
+        return 'error'
 
 def apply_tint(image, color):
     r, g, b, a = np.rollaxis(image, axis=-1)
@@ -52,15 +47,17 @@ def apply_tint(image, color):
     tinted_image = np.stack([r, g, b, a], axis=-1)
     return tinted_image
 
+# This class is used due to a bug in PillowWriter where the output gif does not loop
+# More info can be found here: https://stackoverflow.com/questions/51512141/how-to-make-matplotlib-saved-gif-looping
 class LoopingPillowWriter(PillowWriter):
     def finish(self):
         self._frames[0].save(
-            self._outfile, save_all=True, append_images=self._frames[1:],
+            self.outfile, save_all=True, append_images=self._frames[1:],
             duration=int(1000 / self.fps), loop=0)
 
-def create_media(vfg_json, format, quality='medium'):
-    chosen_quality = QUALITY_SETTINGS.get(quality, QUALITY_SETTINGS["high"])
-    num_interpolation_frames = chosen_quality["interp_frames"]
+def create_media(vfg_json, format, quality, figure_context):
+    chosen_quality = QUALITY_SETTINGS.get(quality, QUALITY_SETTINGS['high'])
+    num_interpolation_frames = chosen_quality['interp_frames']
 
     startStep = 0
     stopStep  = len(vfg_json.get('visualStages')) if vfg_json.get('visualStages') else 1
@@ -71,105 +68,105 @@ def create_media(vfg_json, format, quality='medium'):
     max_y = max(s['y'] + s['height'] for s in all_sprites) if all_sprites else 100
     del all_sprites # clear cache
 
-    last_positions = {}
-    image_table = {}
-    tint_cache = {}
+    with plt.rc_context(figure_context):
+        last_positions = {}
+        image_table = {}
+        tint_cache = {}
 
-    image_keys = vfg_json.get("imageTable", {}).get("m_keys", [])
-    image_values = vfg_json.get("imageTable", {}).get("m_values", [])
-    for key, base64_str in zip(image_keys, image_values):
-        try:
-            image_data = base64.b64decode(base64_str)
-            image = Image.open(BytesIO(image_data)).convert("RGBA")
-            image_table[key] = np.array(image)
-        except:
-            continue
-
-    try:
-        if format in ["mp4", "gif"]:
-            fig, ax = plt.subplots()
-            plt.close(fig) 
-            fig = plt.figure() 
-            ax = fig.add_subplot(111)
-            
-            ax.axis('equal')
-            ax.axis('off')
-
-            def update(frame):
-                ax.clear()
-                ax.set_aspect('equal', adjustable='box')
-                ax.axis('off')
-                ax.set_xlim([0, max_x])
-                ax.set_ylim([0, max_y])
-
-                active_frames = len(visual_stages) * num_interpolation_frames
-                if frame >= active_frames:
-                    stage = visual_stages[-1]
-                    interpolation_alpha = 1
-                else:
-                    interpolation_alpha = frame % num_interpolation_frames / (num_interpolation_frames - 1)
-                    stage_idx = frame // num_interpolation_frames
-                    stage = visual_stages[stage_idx]
-
-                process_sprites(stage, last_positions, interpolation_alpha, image_table, tint_cache, ax)
-
-            total_frames = len(visual_stages) * num_interpolation_frames + int(1 * num_interpolation_frames)
-            fps = int(num_interpolation_frames * _STATES_PER_SECOND)
-
-            with tempfile.NamedTemporaryFile(delete=False, suffix="."+format) as tmpfile:
-                tmpname = tmpfile.name
-
+        image_keys = vfg_json.get('imageTable', {}).get('m_keys', [])
+        image_values = vfg_json.get('imageTable', {}).get('m_values', [])
+        for key, base64_str in zip(image_keys, image_values):
             try:
-                if format == "mp4":
-                    ani = FuncAnimation(fig, update, frames=total_frames, repeat=False, save_count=1)
-                    writer = FFMpegWriter(fps=fps, bitrate=1800)
-                    ani.save(tmpname, writer=writer)
-                elif format == "gif":
-                    ani = FuncAnimation(fig, update, frames=total_frames, repeat=True, save_count=1)
-                    writer = LoopingPillowWriter(fps=fps)
-                    ani.save(tmpname, writer=writer)
-                
-                output = BytesIO()
-                with open(tmpname, "rb") as f:
-                    output.write(f.read())
-                output.seek(0)
-                return output
-            finally:
-                plt.close('all')
-                if os.path.exists(tmpname):
-                    os.remove(tmpname)
+                image_data = base64.b64decode(base64_str)
+                image = Image.open(BytesIO(image_data)).convert('RGBA')
+                image_table[key] = np.array(image)
+            except:
+                continue
 
-        elif format == "png":
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                fig = plt.figure()
+        try:
+            if format in ['mp4', 'gif']:
+                fig, ax = plt.subplots()
+                plt.close(fig) 
+                fig = plt.figure() 
                 ax = fig.add_subplot(111)
+                
+                ax.axis('equal')
+                ax.axis('off')
 
-                for idx, stage in enumerate(visual_stages, start=startStep):
+                def update(frame):
                     ax.clear()
                     ax.set_aspect('equal', adjustable='box')
                     ax.axis('off')
                     ax.set_xlim([0, max_x])
                     ax.set_ylim([0, max_y])
+
+                    active_frames = len(visual_stages) * num_interpolation_frames
+                    if frame >= active_frames:
+                        stage = visual_stages[-1]
+                        interpolation_alpha = 1
+                    else:
+                        interpolation_alpha = frame % num_interpolation_frames / (num_interpolation_frames - 1)
+                        stage_idx = frame // num_interpolation_frames
+                        stage = visual_stages[stage_idx]
+
+                    process_sprites(stage, last_positions, interpolation_alpha, image_table, tint_cache, ax)
+
+                total_frames = len(visual_stages) * num_interpolation_frames + int(1 * num_interpolation_frames)
+                fps = int(num_interpolation_frames * _STATES_PER_SECOND)
+
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.'+format) as tmpfile:
+                    tmpname = tmpfile.name
+
+                try:
+                    if format == 'mp4':
+                        ani = FuncAnimation(fig, update, frames=total_frames, repeat=False)
+                        writer = FFMpegWriter(fps=fps, bitrate=1800)
+                        ani.save(tmpname, writer=writer)
+                    elif format == 'gif':
+                        ani = FuncAnimation(fig, update, frames=total_frames, repeat=True)
+                        writer = LoopingPillowWriter(fps=fps)
+                        ani.save(tmpname, writer=writer)
                     
-                    process_sprites(stage, last_positions, None, image_table, tint_cache, ax)
+                    output = BytesIO()
+                    with open(tmpname, 'rb') as f:
+                        output.write(f.read())
+                    output.seek(0)
+                    return output
+                finally:
+                    plt.close('all')
+                    if os.path.exists(tmpname):
+                        os.remove(tmpname)
 
-                    img_buf = io.BytesIO()
-                    fig.savefig(img_buf, format="png", bbox_inches='tight')
-                    zipf.writestr(f"state_{idx}.png", img_buf.getvalue())
-                    
-                    img_buf.close() 
+            elif format == 'png':
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    fig = plt.figure()
+                    ax = fig.add_subplot(111)
 
-                plt.close(fig)
+                    for idx, stage in enumerate(visual_stages, start=startStep):
+                        ax.clear()
+                        ax.set_aspect('equal', adjustable='box')
+                        ax.axis('off')
+                        ax.set_xlim([0, max_x])
+                        ax.set_ylim([0, max_y])
+                        
+                        process_sprites(stage, last_positions, None, image_table, tint_cache, ax)
 
-            zip_buffer.seek(0)
-            return zip_buffer
-            
-    finally:
-        plt.close('all')
-        tint_cache.clear()
-        image_table.clear()
-        last_positions.clear()
+                        img_buf = io.BytesIO()
+                        fig.savefig(img_buf, format='png', bbox_inches=None)
+                        zipf.writestr(f'state_{idx}.png', img_buf.getvalue())
+                        
+                        img_buf.close() 
+
+                    plt.close(fig)
+
+                zip_buffer.seek(0)
+                return zip_buffer  
+        finally:
+            plt.close('all')
+            tint_cache.clear()
+            image_table.clear()
+            last_positions.clear()
 
 def process_sprites(stage, last_positions, interpolation_alpha, image_table, tint_cache, ax):
     current_sprite_names = set()
