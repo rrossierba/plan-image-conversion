@@ -2,8 +2,8 @@ import matplotlib
 matplotlib.use('Agg')
 
 from vfg_plan import VfgPlan, BlocksworldVfgPlan
-import zipfile, os
-from exporter import create_media
+import zipfile, os, re
+from exporter import export_media
 
 class Visualizer:
     def __init__(self, vfg_plan:VfgPlan, format:str, result_folder:str, animation_profile_text:str, animation_profile_params:dict={}):
@@ -28,7 +28,7 @@ class Visualizer:
         vfg_json = self.vfg_plan.get_vfg(animation_profile)
         folder_name = f"{self.result_folder}/{self.get_plan_name()}"
 
-        result = create_media(vfg_json, self.format, quality='medium')
+        result = export_media(vfg_json, self.format, {'quality':'medium'})
         if self.format == 'png':
             if result:
                 folder_name = f'{folder_name}/'
@@ -48,7 +48,7 @@ class Visualizer:
         return self.vfg_plan.plan.plan_name.split('/')[-1]
 
 class BlocksWorldVisualizer(Visualizer):
-    def __init__(self, blocksworld_vfg_plan:BlocksworldVfgPlan, format, result_folder, animation_profile_text, plan_name, figsize=4, dpi=64):
+    def __init__(self, blocksworld_vfg_plan:BlocksworldVfgPlan, format, result_folder, animation_profile_text, figsize=4, dpi=64):
         '''
         :param blocksworld_vfg_plan: BlocksworldVfgPlan object
         :param format: as Visualizer
@@ -62,7 +62,6 @@ class BlocksWorldVisualizer(Visualizer):
         animation_profile_params = {
             'max_dimensions':blocksworld_vfg_plan.calculate_max_dimensions()
         }
-        self.plan_name = plan_name
         self.figsize = figsize
         self.dpi = dpi
         super().__init__(blocksworld_vfg_plan, format, result_folder, animation_profile_text, animation_profile_params)
@@ -111,4 +110,10 @@ class BlocksWorldVisualizer(Visualizer):
         return new_animation_profile
 
     def get_plan_name(self):
-        return self.plan_name
+        pattern = r'p\d+(?:_\d+)?'
+        match = re.search(pattern, os.path.basename(self.vfg_plan.plan.plan_name))
+        return match.group()
+    
+
+class LogisticsVisualizer(Visualizer):
+    pass

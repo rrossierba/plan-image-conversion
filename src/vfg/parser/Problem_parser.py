@@ -71,7 +71,7 @@ def get_regex_list(predicates_lists):
 
         regular_expression = k.replace(" ", "")
         for x in range(v):
-            regular_expression += "\s[\w\-]+"
+            regular_expression += r"\s[\w\-]+"
         predicates_lists[k] = regular_expression
 
 
@@ -85,7 +85,7 @@ def get_state_list(predicates_pattern_dic, text_block):
     result = []
 
     for predicate_name, predicate_pattern in predicates_pattern_dic.items():
-        temp_pattern = re.compile("\(" + predicate_pattern)
+        temp_pattern = re.compile(r"\(" + predicate_pattern)
         predicates = temp_pattern.findall(text_block)
         if predicates:
             number_of_objects = len(predicates[0].split()) - 1

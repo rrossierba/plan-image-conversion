@@ -1,106 +1,189 @@
-import pickle, os, sys, re
-
+import os, sys, re, gc, pickle
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.append(current_dir)
 
-from multiprocessing import Pool, cpu_count
-from plan import Plan
-from vfg_plan import *
-from visualizer import *
+from multiprocessing import Pool
 from tqdm import tqdm
-import pickle
+from typing import Type, Callable, Union, List
 
-class Converter:
-    def __init__(self, domain_path:str, problem_path:str, plan_path:str, animation_profile_path:str, format:str, save_path:str, n_jobs:int=None):
-        """
-        :param domain_path: percorso del file di dominio del problema
+# need to be imported for the pickle objects
+from plan import Plan
+
+# global variables, instantiated just once but with global scope
+g_domain_text = None
+g_animation_profile_text = None
+g_problem_path = None
+g_folder_name = None
+g_format = None
+g_VisualizerClass = None
+g_VfgPlanClass = None
+g_name_parser = None
+
+# initialize the global variables, useful for multi-processing tasks
+def worker_initializer(domain_text, animation_profile_text, problem_path, 
+                        folder_name, format, VisualizerClass, VfgPlanClass, parser):
+    
+    '''
+    Initialize the global variables, useful for multi-processing tasks
+    
+    :param domain_text
+    :param animation_profile_text
+    :param problem_path
+    :param folder_name
+    :param format: format
+    :param VisualizerClass: Visualizer class
+    :param VfgPlanClass: VfgPlan class
+    :param parser: function to correctely parse problem names
+    '''
+    
+    global g_domain_text, g_animation_profile_text, g_problem_path, g_folder_name, g_format, g_VisualizerClass, g_VfgPlanClass, g_name_parser
+    
+    g_domain_text = domain_text
+    g_animation_profile_text = animation_profile_text
+    g_problem_path = problem_path
+    g_folder_name = folder_name
+    g_format = format
+    g_VisualizerClass = VisualizerClass
+    g_VfgPlanClass = VfgPlanClass
+    g_name_parser = parser
+    
+    gc.disable() # make problems with multi-processing
+
+def worker_process_plan(plan):
+    '''
+    Function that actually does the process
+    
+    :param plan: plan to be processed and converted, any other informations are taken from above
+    '''
+    try:
+        problem_filename_base = g_name_parser(plan.plan_name)
+        problem_file = os.path.join(g_problem_path, f"{problem_filename_base}.pddl")
+        
+        if not os.path.exists(problem_file):
+            print(f"[Warn] Problem file not found: {problem_file}")
+            return
+
+        with open(problem_file, 'r') as problem:
+            problem_text = problem.read().lower()
+
+        vfg_plan_instance = g_VfgPlanClass(plan, g_domain_text, problem_text)
+        viz_instance = g_VisualizerClass(
+            vfg_plan_instance,
+            g_format, 
+            g_folder_name, 
+            g_animation_profile_text
+        )
+
+        viz_instance.save_media()
+
+    except Exception as e:
+        print(f"failed processing plan {plan.plan_name}: {e}")
+
+class GenericConverter:
+    def _init__(self, domain_path: str, problem_path: str, plan_path: Union[str, List[str]], animation_profile_path: str, format: str, save_path: str, visualizer_class: Type, vfg_plan_class: Type, n_jobs: int = 1, name_parser: Callable[[str], str] = None):
+        '''
+        :param domain_path: path of the pddl domain file
         :type domain_path: str
-        :param problem_path: percorso della cartella contenente i file pddl dei problemi
+        :param problem_path: path of the folder containing the pddl problems
         :type problem_path: str
-        :param plan_path: percorso del file pkl contenente i piani
-        :type plan_path: str
-        :param animation_profile_path: percorso del file animation profile in pddl
+        :param plan_path: path, or list of paths, to the plan files
+        :type plan_path: Union[str, List[str]]
+        :param animation_profile_path: path to the pddl animation profile
         :type animation_profile_path: str
-        :param format: formato del risultato: mp4 o png
+        :param format: format for the result
         :type format: str
-        :param save_path: percorso della cartella in cui salvare i risultati
+        :param save_path: path for saving the results
         :type save_path: str
-        """
-
+        :param visualizer_class: class of the Visualizer object
+        :type visualizer_class: Type
+        :param vfg_plan_class: class of the VfgPlan
+        :type vfg_plan_class: Type
+        :param n_jobs: cpu processors reserved for the task
+        :type n_jobs: int, default 1
+        :param name_parser: function to correctely parse the name of the problem
+        :type name_parser: Callable[[str], str]
+        '''
+        
         with open(domain_path, 'r') as domain_file:
             self.domain_text = domain_file.read().lower()
 
-        self.plan_path = plan_path
-        
-        with (open(animation_profile_path, "r")) as animation_profile_file:
-            self.animation_profile_text = animation_profile_file.read()
+        with open(animation_profile_path, "r") as profile:
+            self.animation_profile_text = profile.read()
 
         self.problem_path = problem_path
-        self.format = format if format in ['mp4', 'png'] else None
-        self.folder_name = f"{save_path}/{format}"
+        self.plan_path = plan_path
+        self.format = format if format in ['mp4', 'png', 'gif'] else 'png'
+        
+        self.folder_name = os.path.join(save_path, self.format)
         if not os.path.exists(self.folder_name):
             os.makedirs(self.folder_name)
 
-        self.n_jobs = n_jobs if n_jobs is not None else cpu_count()
-
-    def get_media_from_plan(self, plan:Plan):
-        '''
-        Function that takes a plan and convert it into media.
-        Needs to be implemented by subclasses.
-        '''
-        raise NotImplementedError
+        self.visualizer_class = visualizer_class
+        self.vfg_plan_class = vfg_plan_class
+        self.name_parser = name_parser
+        self.n_jobs = n_jobs if n_jobs is not None else 1
 
     def convert_plans(self):
-        '''
-        Function to convert the plans to the 
-        '''
-
-        if self.plan_path.__class__ == str:
-            plans_file_list = [pickle.load(open(self.plan_path, "rb"))]
-            plans_file_name = [os.path.basename(self.plan_path)]
-        elif self.plan_path.__class__ == list:
-            plans_file_list = []
-            plans_file_name = []
-            for path in self.plan_path:
-                plans_file_list.append(pickle.load(open(path, "rb")))
-                plans_file_name.append(os.path.basename(path))
-
-        # for plans, plan_file_name in zip(plans_file_list, plans_file_name):
-        #     print(f"Converting {len(plans)} plans from {plan_file_name} to {self.format}...")
-        #     for plan in tqdm(plans):
-        #         self.get_media_from_plan(plan)
-
-        for plans, plan_file_name in zip(plans_file_list, plans_file_name):
-            print(f"Converting {len(plans)} plans from {plan_file_name} to {self.format} using {self.n_jobs} processes...")
-            
-            with Pool(processes=self.n_jobs) as pool:
-                with tqdm(total=len(plans), desc=f"Processing {plan_file_name}") as pbar:
-                    for _ in pool.imap_unordered(self.get_media_from_plan, plans, chunksize=1):
-                        pbar.update(1)
-    
-class BlocksWorldConverter(Converter):
-    def get_media_from_plan(self, plan:Plan):
-        '''
-        Function that takes a plan and convert it into a blocksworld image.
-
-        :param plan: Plan object to be converted
-        :type plan: Plan
-        '''
-        pattern = r'p\d+(?:_\d+)?'
-        plan_name = re.search(pattern, os.path.basename(plan.plan_name)).group()
+        paths = [self.plan_path] if isinstance(self.plan_path, str) else self.plan_path
         
-        with open(f'{self.problem_path}/{plan_name.split('_')[0]}.pddl', 'r') as problem:
-            problem_text = problem.read().lower()
+        # the same for the domain
+        init_args = (
+            self.domain_text,
+            self.animation_profile_text,
+            self.problem_path,
+            self.folder_name,
+            self.format,
+            self.visualizer_class,
+            self.vfg_plan_class,
+            self.name_parser
+        )
 
-        BlocksWorldVisualizer(
-            blocksworld_vfg_plan=BlocksworldVfgPlan(plan, self.domain_text, problem_text), 
-            format=self.format, 
-            result_folder=self.folder_name, 
-            plan_name=plan_name,
-            animation_profile_text=self.animation_profile_text
-        ).save_media()
+        for path in paths:
+            try:
+                if not os.path.exists(path):
+                    print(f"Skipping non existent plan file: {path}")
+                    continue
+                    
+                with open(path, "rb") as f:
+                    plans_list = pickle.load(f)
+                
+                plan_file_name = os.path.basename(path)
+                print(f"Converting {len(plans_list)} plans from {plan_file_name} to {self.format} using {self.n_jobs} processes...")
 
-class LogisticsConverter(Converter):
-    def get_media_from_plan(self, plan):
-        pass
+                # multi process operation
+                with Pool(processes=self.n_jobs, initializer=worker_initializer, initargs=init_args, maxtasksperchild=5) as pool:
+                    list(
+                        tqdm(
+                            pool.imap_unordered(worker_process_plan, plans_list, chunksize=1), 
+                            total=len(plans_list),
+                            desc=f"Processing {plan_file_name}"
+                        )
+                    )
+                
+                del plans_list
+                gc.collect()
+
+            except Exception as e:
+                print(f"error processing file {path}: {e}")
+
+## functions to parse the problem name into the actual name
+def blocksworld_problem_name_parser(plan_name: str) -> str:
+    '''
+    Function to correctely parse the plan name for BlocksWorld domain.
+    
+    :param plan_name: whole plan name
+    :type plan_name: str
+    :return: the correct problem name
+    :rtype: str
+    '''
+    pattern = r'p\d+(?:_\d+)?'
+    match = re.search(pattern, os.path.basename(plan_name))
+    if match:
+        full_match = match.group()
+        return full_match.split('_')[0]
+    return os.path.basename(plan_name).split('.')[0]
+
+def logistics_problem_name_parser(plan_name: str)-> str:
+    ''''''
+    pass

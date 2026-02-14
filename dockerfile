@@ -1,23 +1,27 @@
 FROM python:3.13.11-slim-trixie
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# these will be overwritten from the .env file
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+ARG USERNAME=user
+RUN groupadd -g ${GROUP_ID} ${USERNAME} && \
+    useradd -u ${USER_ID} -g ${USERNAME} -m -s /bin/bash ${USERNAME}
 
-# main directory
-RUN mkdir /app && chown -R appuser:appuser /app
-
+# create working directory
+RUN mkdir -p /app /result && \
+    chown -R ${USERNAME}:${USERNAME} /app /result
 WORKDIR /app
 
-# copy src and change owner
-COPY --chown=appuser:appuser src/ ./src/
-COPY --chown=appuser:appuser main.py ./main.py
+# copy files
+COPY --chown=${USERNAME}:${USERNAME} src/ ./src/
+COPY --chown=${USERNAME}:${USERNAME} main.py ./main.py
 
-# update packages and dependencies (as root)
+# update and install dependencies
 RUN apt-get update
 RUN uv pip install -r src/requirements.txt --system
 
 # change user
-USER appuser
+USER ${USERNAME}
 
 CMD ["python", "main.py"]
