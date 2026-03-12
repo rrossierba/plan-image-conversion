@@ -32,6 +32,8 @@ A template is provided at `config_template.json`. The configuration must specify
 * **`plans_path`**: Path to the `.pkl` plan object (or a list of objects) to be converted.
 * **`num_cores`**: The number of CPU cores to utilize for parallel processing.
 
+---
+
 ## Usage
 
 The application can be executed either via a Docker container (recommended) or as a standalone Python script. 
@@ -49,8 +51,7 @@ Create a file named `.env` in the root directory:
 ```bash
 USER_ID=1000        # Replace with your actual UID (run `id -u`)
 GROUP_ID=1000       # Replace with your actual GID (run `id -g`)
-USERNAME=user_name  # Replace with yout username
-
+USERNAME=user_name  # Replace with your username
 ```
 
 **2. Build the Image**
@@ -58,7 +59,6 @@ Build the Docker image using the provided Dockerfile:
 
 ```bash
 docker build -t plan-image-conversion .
-
 ```
 
 **3. Run the Container**
@@ -72,7 +72,6 @@ docker run \
   -d \
   --name converter \
   plan-image-conversion
-
 ```
 
 ### Method 2: Local Python Execution
@@ -86,6 +85,8 @@ To run the script directly on your machine:
 ```bash
 python src/main.py --config path/to/your/config.json
 ```
+
+---
 
 ## How it works
 
