@@ -102,7 +102,8 @@ class BlocksWorldVisualizer(Visualizer):
         figure_params = {
             'figure.figsize': (self.figsize, self.figsize),
             'figure.dpi': self.dpi,
-            'font.size': block_size,
+            'font.size': int(block_size*1.4),
+            'font.weight': 10,#max(50, block_size//50),
             'figure.subplot.left': 0.01,
             'figure.subplot.right': 0.99,
             'figure.subplot.bottom': 0.01,

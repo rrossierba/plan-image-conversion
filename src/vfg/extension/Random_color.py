@@ -44,7 +44,6 @@ def get_dynamic_pastel_color():
     """
     Genera un colore pastello casuale calcolando valori alti.
     """
-    # Genera valori tra 0.6 e 1.0 per assicurare che sia chiaro e non scuro
     r = random.uniform(0.6, 1.0)
     g = random.uniform(0.6, 1.0)
     b = random.uniform(0.6, 1.0)
@@ -59,3 +58,6 @@ def get_random_color():
     """
     #return random.choice(random_colorList)
     return get_dynamic_pastel_color()
+
+def get_white():
+    return {'r': 1.0, 'g': 1.0, 'b': 1.0, 'a': 1.0}

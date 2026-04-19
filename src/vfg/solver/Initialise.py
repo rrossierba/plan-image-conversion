@@ -52,6 +52,10 @@ def initialise_objects(object_list, animation_profile):
                         unsolved_objects[objectname][
                             objproperty] = Random_color.get_random_color()
                         continue
+                    elif value.lower() == "whitecolor":
+                        unsolved_objects[objectname][
+                            objproperty] = Random_color.get_white()
+                        continue
                 unsolved_objects[objectname][objproperty] = value
             else:
                 unsolved_objects[objectname][objproperty] = False
