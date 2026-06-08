@@ -102,12 +102,12 @@ class BlocksWorldVisualizer(Visualizer):
         figure_params = {
             'figure.figsize': (self.figsize, self.figsize),
             'figure.dpi': self.dpi,
-            'font.size': int(block_size*1.4),
+            'font.size': int(block_size*1.2),
             'font.weight': 10,#max(50, block_size//50),
-            'figure.subplot.left': 0.01,
-            'figure.subplot.right': 0.99,
-            'figure.subplot.bottom': 0.01,
-            'figure.subplot.top': 0.99
+            'figure.subplot.left': 0.10,
+            'figure.subplot.right': 0.90,
+            'figure.subplot.bottom': 0.10,
+            'figure.subplot.top': 0.90
         }
 
         return new_animation_profile, figure_params

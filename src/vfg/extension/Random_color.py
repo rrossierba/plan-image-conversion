@@ -61,3 +61,41 @@ def get_random_color():
 
 def get_white():
     return {'r': 1.0, 'g': 1.0, 'b': 1.0, 'a': 1.0}
+
+def get_deterministic_color(object_name):
+    # random.seed(object_name)
+    # r = random.uniform(0.65, 1.0)
+    # g = random.uniform(0.65, 1.0)
+    # b = random.uniform(0.65, 1.0)
+    # return {'r': r, 'g': g, 'b': b, 'a': 1.0}
+
+    alphabet_colors_mapping = {
+        "A": {"r": 1.0, "g": 0.70, "b": 0.73, "a": 1.0},    # Rosa Pastello
+        "B": {"r": 1.0, "g": 0.87, "b": 0.73, "a": 1.0},    # Pesca
+        "C": {"r": 1.0, "g": 1.0, "b": 0.73, "a": 1.0},     # Giallo Crema
+        "D": {"r": 0.73, "g": 1.0, "b": 0.79, "a": 1.0},    # Verde Menta
+        "E": {"r": 0.73, "g": 0.88, "b": 1.0, "a": 1.0},    # Celeste
+        "F": {"r": 0.87, "g": 0.73, "b": 1.0, "a": 1.0},    # Lavanda
+        "G": {"r": 1.0, "g": 0.73, "b": 0.87, "a": 1.0},    # Rosa Orchidea
+        "H": {"r": 0.73, "g": 1.0, "b": 0.94, "a": 1.0},    # Turchese Chiaro
+        "I": {"r": 1.0, "g": 0.85, "b": 0.76, "a": 1.0},    # Albicocca
+        "J": {"r": 0.88, "g": 0.95, "b": 0.69, "a": 1.0},   # Lime Tenue
+        "K": {"r": 0.70, "g": 0.72, "b": 0.97, "a": 1.0},   # Blu Periwinkle
+        "L": {"r": 0.99, "g": 0.80, "b": 0.90, "a": 1.0},   # Rosa Confetto
+        "M": {"r": 0.81, "g": 0.98, "b": 1.0, "a": 1.0},    # Acqua
+        "N": {"r": 1.0, "g": 0.93, "b": 0.87, "a": 1.0},    # Crema Scuro
+        "O": {"r": 0.86, "g": 0.86, "b": 0.86, "a": 1.0},   # Grigio Perla
+        "P": {"r": 1.0, "g": 0.78, "b": 0.59, "a": 1.0},    # Arancio Tenue
+        "Q": {"r": 0.63, "g": 0.91, "b": 0.90, "a": 1.0},   # Tiffany
+        "R": {"r": 0.71, "g": 0.97, "b": 0.78, "a": 1.0},   # Smeraldo Chiaro
+        "S": {"r": 0.98, "g": 0.63, "b": 0.69, "a": 1.0},   # Salmone
+        "T": {"r": 0.64, "g": 0.82, "b": 1.0, "a": 1.0},    # Sky Blue
+        "U": {"r": 1.0, "g": 0.69, "b": 0.80, "a": 1.0},    # Bubblegum
+        "V": {"r": 0.74, "g": 0.70, "b": 1.0, "a": 1.0},    # Violetto
+        "W": {"r": 0.79, "g": 1.0, "b": 0.75, "a": 1.0},    # Green Glow
+        "X": {"r": 0.99, "g": 1.0, "b": 0.71, "a": 1.0},    # Canary
+        "Y": {"r": 1.0, "g": 0.78, "b": 1.0, "a": 1.0},     # Mauve
+        "Z": {"r": 0.61, "g": 0.96, "b": 1.0, "a": 1.0}     # Cyan Elettrico Tenue
+    }
+
+    return alphabet_colors_mapping.get(object_name.upper(), None)
