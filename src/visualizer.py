@@ -1,5 +1,5 @@
-from vfg_plan import VfgPlan, BlocksWorldVfgPlan
-import zipfile, os, re
+from vfg_plan import VfgPlan, BlocksWorldVfgPlan, LogisticsVfgPlan
+import zipfile, os, re, json
 from exporter import export_media
 
 class Visualizer:
@@ -100,14 +100,14 @@ class BlocksWorldVisualizer(Visualizer):
 
         # update rcparams of matplotlib
         figure_params = {
-            'figure.figsize': (self.figsize, self.figsize),
+            'figure.figsize': (10, 10),#(self.figsize, self.figsize),
             'figure.dpi': self.dpi,
             'font.size': int(block_size*1.2),
-            'font.weight': 10,#max(50, block_size//50),
-            'figure.subplot.left': 0.10,
-            'figure.subplot.right': 0.90,
-            'figure.subplot.bottom': 0.10,
-            'figure.subplot.top': 0.90
+            'font.weight': max(50, block_size//50),
+            'figure.subplot.left': 0.01,
+            'figure.subplot.right': 0.99,
+            'figure.subplot.bottom': 0.01,
+            'figure.subplot.top': 0.99
         }
 
         return new_animation_profile, figure_params
@@ -119,4 +119,62 @@ class BlocksWorldVisualizer(Visualizer):
     
 
 class LogisticsVisualizer(Visualizer):
-    pass
+    def __init__(self, logistics_plan: LogisticsVfgPlan, format: str, result_folder: str, animation_profile_text: str, figsize=8, dpi=32):
+        animation_profile_params: dict = {}
+        self.figsize = figsize
+        self.dpi = dpi
+        super().__init__(logistics_plan, format, result_folder, animation_profile_text, animation_profile_params)
+
+    def adjust_animation_profile(self):
+        '''
+        Dynamically calculate the maximum number of objects inside a location/airport
+        and the maximum number of locations/airports inside a city to adjust their widths in the AP.
+        '''
+        max_at, max_in_city = self.vfg_plan.get_max_elements()
+        max_width = self.figsize*self.dpi
+
+        loc_width = max_at * 100 + 40
+        
+        # counts = self.vfg_plan.get_object_counts()
+        num_cities = 6# max(counts['cities'], 1)
+        
+        city_width = max(max_width, max_in_city * (loc_width + 30) + 10)
+
+        city_height = int(city_width / (num_cities*1.2))
+        loc_height = int(city_height * 0.85)
+        
+        truck_height = int(loc_height * 0.66)
+        plane_height = int(loc_height * 0.66)
+        package_height = int(truck_height * 0.6)
+        element_width = 80#int(loc_width/max_at)
+        
+        
+        new_animation_profile = self.animation_profile_text.format_map({
+            'CITY_WIDTH': str(city_width),
+            'CITY_HEIGHT': str(city_height),
+            'LOCATION_WIDTH': str(loc_width),
+            'LOCATION_HEIGHT': str(loc_height),
+            'AIRPORT_WIDTH': str(loc_width),
+            'AIRPORT_HEIGHT': str(loc_height),
+            'TRUCK_HEIGHT': str(truck_height),
+            'PLANE_HEIGHT': str(plane_height),
+            'PACKAGE_HEIGHT': str(package_height),
+            'ELEMENT_WIDTH': str(element_width),
+        })
+
+        figure_params = {
+            'figure.figsize': (self.figsize, self.figsize),
+            'figure.dpi': self.dpi,
+            'figure.subplot.left': 0.01,
+            'figure.subplot.right': 0.99,
+            'figure.subplot.bottom': 0.01,
+            'figure.subplot.top': 0.99,
+            'axes.linewidth':0.5,
+            'font.size': 19,
+        }
+        return new_animation_profile, figure_params
+    
+    def get_plan_name(self):
+        pattern = r'p\d+(?:_\d+)?'
+        match = re.search(pattern, os.path.basename(self.vfg_plan.plan.plan_name))
+        return match.group()

@@ -3,7 +3,7 @@ import argparse
 import os
 import sys
 import logging
-from src.convert import GenericConverter, blocksworld_problem_name_parser, logistics_problem_name_parser
+from src.convert import GenericConverter, parse_xml_plan_name
 from src.vfg_plan import BlocksWorldVfgPlan, LogisticsVfgPlan
 from src.visualizer import BlocksWorldVisualizer, LogisticsVisualizer
 from src.logger import setup_logging
@@ -17,12 +17,12 @@ DOMAIN_REGISTRY = {
     'blocksworld': {
         'visualizer': BlocksWorldVisualizer,
         'vfg_plan': BlocksWorldVfgPlan,
-        'problem_name_parser': blocksworld_problem_name_parser
+        'problem_name_parser': parse_xml_plan_name
     },
-    'logistics': { # still work in progress
+    'logistics': {
         'visualizer': LogisticsVisualizer,
         'vfg_plan': LogisticsVfgPlan,
-        'problem_name_parser': logistics_problem_name_parser
+        'problem_name_parser': parse_xml_plan_name
     }
 }
 

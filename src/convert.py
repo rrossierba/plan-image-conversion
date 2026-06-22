@@ -177,15 +177,7 @@ class GenericConverter:
                 logger.exception(f"Error processing file {path}: {e}")
 
 ## functions to parse the problem name into the actual name
-def blocksworld_problem_name_parser(plan_name: str) -> str:
-    '''
-    Function to correctely parse the plan name for BlocksWorld domain.
-    
-    :param plan_name: whole plan name
-    :type plan_name: str
-    :return: the correct problem name
-    :rtype: str
-    '''
+def parse_xml_plan_name(plan_name: str)-> str:
     pattern = r'p\d+(?:_\d+)?'
     match = re.search(pattern, os.path.basename(plan_name))
     if match:
@@ -193,13 +185,24 @@ def blocksworld_problem_name_parser(plan_name: str) -> str:
         return full_match.split('_')[0]
     return os.path.basename(plan_name).split('.')[0]
 
-def logistics_problem_name_parser(plan_name: str)-> str:
-    '''
-    Function to correctely parse the plan name for Logistic domain.
+# def blocksworld_problem_name_parser(plan_name: str) -> str:
+#     '''
+#     Function to correctely parse the plan name for BlocksWorld domain.
     
-    :param plan_name: whole plan name
-    :type plan_name: str
-    :return: the correct problem name
-    :rtype: str
-    '''
-    return plan_name
+#     :param plan_name: whole plan name
+#     :type plan_name: str
+#     :return: the correct problem name
+#     :rtype: str
+#     '''
+#     return parse_xml_plan_name(plan_name)
+
+# def logistics_problem_name_parser(plan_name: str)-> str:
+#     '''
+#     Function to correctely parse the plan name for Logistic domain.
+    
+#     :param plan_name: whole plan name
+#     :type plan_name: str
+#     :return: the correct problem name
+#     :rtype: str
+#     '''
+#     return parse_xml_plan_name(plan_name)

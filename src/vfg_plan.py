@@ -47,4 +47,61 @@ class BlocksWorldVfgPlan(VfgPlan):
         return len(self.stages.get('objects'))
     
 class LogisticsVfgPlan(VfgPlan):
-    pass
+    def __init__(self, plan: Plan, domain_text: str, problem_text: str):
+        super().__init__(plan, domain_text, problem_text)
+
+    def get_max_elements(self):
+        max_at = 0
+        max_in_city = 0
+
+        for stage in self.stages['stages']:
+            at_counts = {}
+            in_city_counts = {}
+            
+            for item in stage['items']:
+                name = item['name']
+                objs = item['objectNames']
+                
+                if name == 'at' and len(objs) >= 2:
+                    loc = objs[1]
+                    at_counts[loc] = at_counts.get(loc, 0) + 1
+                elif name == 'in-city' and len(objs) >= 2:
+                    city = objs[1]
+                    in_city_counts[city] = in_city_counts.get(city, 0) + 1
+                    
+            if at_counts:
+                max_at = max(max_at, max(at_counts.values()))
+            if in_city_counts:
+                max_in_city = max(max_in_city, max(in_city_counts.values()))
+
+        return max_at, max_in_city
+    
+    def get_object_counts(self):
+        '''
+        Count objects by type prefix for layout calculations.
+        Returns a dict with counts of cities, locations, airports, trucks, airplanes, packages.
+        '''
+        objects = self.stages.get('objects', [])
+        counts = {
+            'cities': 0,
+            'locations': 0, 
+            'airports': 0,
+            'trucks': 0,
+            'airplanes': 0,
+            'packages': 0,
+            'total': len(objects)
+        }
+        for obj in objects:
+            if obj.startswith('cit'):
+                counts['cities'] += 1
+            elif obj.startswith('pos'):
+                counts['locations'] += 1
+            elif obj.startswith('apt'):
+                counts['airports'] += 1
+            elif obj.startswith('tru'):
+                counts['trucks'] += 1
+            elif obj.startswith('apn'):
+                counts['airplanes'] += 1
+            elif obj.startswith('obj'):
+                counts['packages'] += 1
+        return counts

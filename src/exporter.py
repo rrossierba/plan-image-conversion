@@ -171,7 +171,9 @@ def create_media(vfg_json, format, quality, figure_context):
 def process_sprites(stage, last_positions, interpolation_alpha, image_table, tint_cache, ax):
     current_sprite_names = set()
     
-    for sprite in stage['visualSprites']:
+    # Sort sprites by depth so higher depth objects are drawn on top (e.g. packages over trucks over locations)
+    sorted_sprites = sorted(stage['visualSprites'], key=lambda s: s.get('depth', 0))
+    for sprite in sorted_sprites:
         x, y, w, h = sprite['x'], sprite['y'], sprite['width'], sprite['height']
         color = (sprite['color']['r'], sprite['color']['g'], sprite['color']['b'], sprite['color']['a'])
         name = sprite['name']
@@ -203,9 +205,18 @@ def process_sprites(stage, last_positions, interpolation_alpha, image_table, tin
         last_positions[name] = (x, y)
         
         if sprite.get('showname', False):
+            display_name = name.replace('obj', '') if name.startswith('obj') else name.upper()
+            
+            if display_name.startswith('APT') or display_name.startswith('POS'):
+                text_y = y + h * 0.9
+                va = 'top'
+            else:
+                text_y = y + h/2
+                va = 'center'
+                
             ax.text(
-                x + w/2, y + h/2, name.upper(), 
-                ha='center', va='center',
+                x + w/2, text_y, display_name, 
+                ha='center', va=va,
                 color='white' if sum(color[:3]) < 1.5 else 'black'
             )
         

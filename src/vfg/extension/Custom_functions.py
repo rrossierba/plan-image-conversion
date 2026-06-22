@@ -116,16 +116,6 @@ def distributex(obj_list, settings, state, remove, get_meta):
                     
                     result["x"] = num * (width + default_setting["spacebtw"])
                     return result, state
-            # for num, value in enumerate(state):
-            #     if isinstance(value, int):
-            #         state[num] = obj
-            #         if num < len(state) - 1:
-            #             state[num] = num+1
-            #         else:
-            #             state.append(num + 1)
-                    
-            #         result["x"] = num * (width + default_setting["spacebtw"])
-            #         return result, state
     else:
         if obj in state:
             objindex = state.index(obj)
