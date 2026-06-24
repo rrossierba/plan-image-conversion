@@ -99,3 +99,21 @@ def get_deterministic_color(object_name):
     }
 
     return alphabet_colors_mapping.get(object_name.upper(), None)
+
+def get_deterministic_color_logistics(object_name):
+    color_map = {'obj00': {'a': 1.0, 'b': 0.59, 'g': 0.98, 'r': 0.98},
+ 'obj11': {'a': 1.0, 'b': 0.43, 'g': 0.66, 'r': 0.93},
+ 'obj12': {'a': 1.0, 'b': 0.56, 'g': 0.94, 'r': 0.97},
+ 'obj13': {'a': 1.0, 'b': 0.41, 'g': 0.6, 'r': 0.92},
+ 'obj21': {'a': 1.0, 'b': 0.54, 'g': 0.9, 'r': 0.96},
+ 'obj22': {'a': 1.0, 'b': 0.39, 'g': 0.55, 'r': 0.91},
+ 'obj23': {'a': 1.0, 'b': 0.52, 'g': 0.85, 'r': 0.96},
+ 'obj33': {'a': 1.0, 'b': 0.37, 'g': 0.49, 'r': 0.9},
+ 'obj44': {'a': 1.0, 'b': 0.5, 'g': 0.81, 'r': 0.95},
+ 'obj55': {'a': 1.0, 'b': 0.35, 'g': 0.43, 'r': 0.9},
+ 'obj66': {'a': 1.0, 'b': 0.47, 'g': 0.76, 'r': 0.94},
+ 'obj77': {'a': 1.0, 'b': 0.33, 'g': 0.37, 'r': 0.89},
+ 'obj88': {'a': 1.0, 'b': 0.45, 'g': 0.71, 'r': 0.93},
+ 'obj99': {'a': 1.0, 'b': 0.31, 'g': 0.31, 'r': 0.88}}
+    
+    return color_map[object_name]

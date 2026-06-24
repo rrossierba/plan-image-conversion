@@ -60,6 +60,10 @@ def initialise_objects(object_list, animation_profile):
                         unsolved_objects[objectname][
                             objproperty] = Random_color.get_deterministic_color(objectname)
                         continue
+                    elif value.lower() == 'logistics_deterministic_color':
+                        unsolved_objects[objectname][
+                            objproperty] = Random_color.get_deterministic_color_logistics(objectname)
+                        continue
                 unsolved_objects[objectname][objproperty] = value
             else:
                 unsolved_objects[objectname][objproperty] = False
